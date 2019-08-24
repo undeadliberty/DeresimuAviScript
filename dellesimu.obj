@@ -1,0 +1,204 @@
+--track0:属性,0,3,0,1
+--track1:落下速度,1,10,8,0.1
+--track2:開始位置,0,1500,0,0.01
+--file:
+
+obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
+obj.effect("クリッピング","上",142*obj.track0,"下",142*(3-obj.track0),"中心の位置を変更",1)
+obj.draw(0,240,0,0.96)
+
+
+local function GetPosition(time,start,goal)
+    local y=3000*(time-0.1)*(time-0.12)-330
+    if(time >0.22)then
+        y= -300 +540*(time-0.22)/0.78
+    end
+    local k =0.5
+    local z=400*k*((1+k)/(time+k)-1)
+    local x=197*(start*z/400+goal*(1-z/400)-3)
+    local size = 1-(1-time)*(1-time)
+    return x,y,z,size
+end
+local function Drawnote(type,start,goal,time,...)--種類、出現位置、到着位置、経過時間、(ターゲット先の３つ)
+    obj.load("image",obj.getinfo("script_path").."image\\note\\notes.png")
+    local nox,noy,noz,size =GetPosition(time,start,goal)
+    if(type=='1')then
+        type=220
+    elseif(type=='2')then
+        type=0
+    elseif(type=='3')then
+        type=330
+    elseif(type=='4')then
+        type=110
+    elseif(type=='5')then
+        type=440
+    else
+        type=0
+    end
+    obj.drawpoly(nox-77*size,noy-55*size,noz,nox+77*size,noy-55*size,noz,nox+77*size,noy+55*size,noz,nox-77*size,noy+55*size,noz,154*obj.track0,type,154*(1+obj.track0),type,154*(1+obj.track0),type+110,154*obj.track0,type+110)
+    return nil
+end
+local function Drawlong(start,goal,st,gt)
+    local k=40
+    local kp =0.5
+    local time=0
+    local k2=0
+    obj.setoption("drawtarget","tempbuffer",1280,720)
+    obj.setoption("blend","alpha_add")
+    if(gt>1)then
+        k2=(gt-1)/3
+    end
+    for i=0,k-1 do
+        if(st < (i+1)/k and i/k < gt) then
+            obj.load("figure","四角形",HSV(0,0,90))
+            if(st<i/k) then
+                time=i/k
+            else
+                time=st
+            end
+            local x1,y1,z1,size1 =GetPosition(time,start,goal)
+            if((i+1)/k<gt) then
+                time=(i+1)/k
+            else
+                time=gt
+            end
+            local x2,y2,z2,size2 =GetPosition(time,start,goal)
+            obj.setoption("drawtarget","tempbuffer")
+            if(obj.track0==3)then
+                obj.effect("グラデーション","color",HSV(math.floor((i/k+k2)*360+120)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+120)%360,30,90))
+            end
+            obj.drawpoly(x1-48*size1,y1,z1,x1+48*size1,y1,z1,x2+48*size2,y2,z2,x2-48*size2,y2,z2)
+        end
+    end
+    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
+    obj.load("tempbuffer")
+    obj.draw(0,0,0,1,0.6) 
+end
+local combo=0
+local bpm={}
+local offset=0
+local notime = obj.track2+obj.time
+
+local speed=3-0.3*obj.track1
+if obj.track1>4.0 then
+    speed=speed + 0.1*(obj.track1-4)
+    if obj.track1>9.0 then
+        speed=speed- 0.1*(obj.track1-9)
+    end
+end
+
+local function GetTimeFromStep(step)
+    local time=offset
+    local i=0
+    local j=1
+    for line =1, #bpm do
+        if(bpm[line][1]<step) then
+            time=time+(bpm[line][1]-i)*240/j
+            i=bpm[line][1]
+            j=bpm[line][2]
+        else
+            time=time+(step-i)*240/j
+            return time
+        end
+    end
+    time=time+(step-i)*240/j
+        return time
+end
+
+local longstack={}
+local frickstack={}
+local longpair={}
+local flickpair={}
+local notestack={}
+
+local function GetNotesFromFile()
+    for line in io.lines(file) do
+        if(string.match(line,"^#BPM")) then
+            bpm[1]={0,tonumber(string.match(line,"[0-9.]+"))}
+        elseif(string.match(line,"^#Offset")) then
+            offset= tonumber(string.match(line,"[0-9.]+"))/1000
+        elseif(string.match(line,"^#ChangeBPM")) then
+            local a,b = string.match(line,"([0-9.]+),%s*([0-9.]+)")
+            table.insert(bpm,{tonumber(a),tonumber(b)})
+        elseif(string.match(line,"^#%d")) then
+            local canel,step,notes,sg,eg=string.match(line,"^#(%d+),(%d+):(%d+):(%d+):?(%d*)")
+            if(not tonumber(eg))then
+                eg=sg    
+            end
+            canel=tonumber(canel)
+            step=tonumber(step)
+            local j=1
+            local k=0
+            for i in string.gmatch(notes,"%d") do
+                if(GetTimeFromStep(step)>notime+speed)then
+                    for a,b in pairs(longstack)do
+                        table.insert(longpair,{b[2],a,0,b[1]})
+                        longstack[a]=nil    
+                    end
+                    return nil;
+                end
+                local t=GetTimeFromStep(step+k/#notes)
+                if(i~='0')then
+                    local start=tonumber(string.sub(sg,j,j))
+                    local goal=tonumber(string.sub(eg,j,j))
+                    if(notime > t) then
+                        if(longstack[goal])then
+                            longstack[goal]=nil
+                        end
+                        if(i=='4')then
+                            longstack[goal]={(notime-t)/speed+1,start}
+                        end
+                        combo=combo+1
+                    elseif(t-notime<speed)then
+                        if(longstack[goal])then
+                            table.insert(longpair,{start,goal,(notime-t)/speed+1,longstack[goal][1]})
+                            longstack[goal]=nil
+                            if(i=='2')then
+                                i='4'
+                            end
+                        elseif(i=='4')then
+                            longstack[goal]={(notime-t)/speed+1,start}
+                        end
+                        table.insert(notestack,{(notime-t)/speed+1,i,start,goal})
+                    end
+                    j=j+1
+                end
+                k=k+1
+            end
+        
+        end
+    end
+end
+
+GetNotesFromFile()
+for i=1,#longpair do
+    --debug_print(longpair[i][1]..','..longpair[i][2]..','..longpair[i][3]..','..longpair[i][4])
+    Drawlong(longpair[i][1],longpair[i][2],longpair[i][3],longpair[i][4])
+end
+table.sort(notestack,function(a,b)return a[1]<b[1] end)
+for i=1,#notestack do
+    if(i<#notestack and notestack[i][1]==notestack[i+1][1])then
+        time=notestack[i][1]
+        local x1,y1,z1,size =GetPosition(time,notestack[i][3],notestack[i][4])
+        local x2 =GetPosition(time,notestack[i+1][3],notestack[i+1][4])
+        if(x1 > x2)then
+            x1,x2=x2,x1
+        end
+        local size = 1-(1-time)*(1-time)
+        obj.load("figure","四角形",0xffffff,10)
+        obj.effect("グラデーション","type",3,"幅",10)
+        obj.drawpoly(x1+48*size,y1-5*size,z1,x2-48*size,y1-5*size,z1,x2-48*size,y1+5*size,z1,x1+48*size,y1+5*size,z1)
+    end
+    Drawnote(notestack[i][2],notestack[i][3],notestack[i][4],notestack[i][1])
+end
+if(combo>1) then
+    obj.setfont("Arial Black",100,4,0xffffff,0xffb400)
+    obj.load("text",combo)
+    obj.effect("リサイズ","X",90)
+    obj.draw(410,-230)
+    obj.setfont("Arial Black",40,3,0xffffff,0xffb400)
+    obj.load("text","COMBO")
+    obj.effect("リサイズ","X",90)
+    obj.draw(410,-165)    
+end
+
