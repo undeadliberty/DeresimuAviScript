@@ -9,11 +9,15 @@ obj.draw(0,240,0,0.96)
 
 
 local function GetPosition(time,start,goal)
-    local y=3000*(time-0.1)*(time-0.12)-330
-    if(time >0.22)then
-        y= -300 +540*(time-0.22)/0.78
+    local k=0.18
+    if(time<k)then
+        k=time
     end
-    local k =0.5
+    local y=3000*(k-0.1)*(k-0.1)-335
+    if(time>k)then
+        y= 240 +(y-240)*(1-time)/(1-k)
+    end
+    k =0.5
     local z=400*k*((1+k)/(time+k)-1)
     local x=197*(start*z/400+goal*(1-z/400)-3)
     local size = 1-(1-time)*(1-time)
@@ -88,7 +92,7 @@ local function Drawflick(time1,start1,goal1,time2,start2,goal2)
     local cosx=(x1-x2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
     obj.setoption("drawtarget","tempbuffer",1280,720)
     obj.load("figure","ŽlŠpŒ`",HSV(0,0,80))
-    obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size1*cosx,z2,x2-24*size2*sinx,y2+24*size1*cosx,z2)
+    obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2)
     obj.load("tempbuffer")
     if(obj.track0==3)then
         obj.setoption("drawtarget","tempbuffer",2560,720)
@@ -170,7 +174,7 @@ local function GetNotesFromFile()
                     local start=tonumber(string.sub(sg,j,j))
                     local goal=tonumber(string.sub(eg,j,j))
                     if(notime > t) then
-                        if(longstack[goal])then
+                        if(longstack[goal] and start==longstack[goal][2])then
                             longstack[goal]=nil
                         end
                         if(flickstack[canel])then
@@ -178,21 +182,21 @@ local function GetNotesFromFile()
                         end
                         
                         if(i=='4')then
-                            longstack[goal]=(notime-t)/speed+1
+                            longstack[goal]={(notime-t)/speed+1,start}
                         end
                         if(i=='1' or i=='3')then
                             flickstack[canel]={(notime-t)/speed+1,i,start,goal}
                         end
                         combo=combo+1
                     elseif(t-notime<speed)then
-                        if(longstack[goal])then
-                            table.insert(longpair,{start,goal,(notime-t)/speed+1,longstack[goal]})
+                        if(longstack[goal] and start==longstack[goal][2])then
+                            table.insert(longpair,{start,goal,(notime-t)/speed+1,longstack[goal][1]})
                             longstack[goal]=nil
                             if(i=='2')then
                                 i='4'
                             end
                         elseif(i=='4')then
-                            longstack[goal]=(notime-t)/speed+1
+                            longstack[goal]={(notime-t)/speed+1,start}
                         end
                         if(flickstack[canel])then
                             if(i=='1' or i=='3')then
@@ -207,8 +211,8 @@ local function GetNotesFromFile()
                         end
                         table.insert(notestack,{(notime-t)/speed+1,i,start,goal})
                     else
-                        if(longstack[goal])then
-                            table.insert(longpair,{start,goal,0,longstack[goal]})
+                        if(longstack[goal] and start==longstack[goal][2])then
+                            table.insert(longpair,{start,goal,0,longstack[goal][1]})
                             longstack[goal]=nil
                         end
                         if(flickstack[canel])then
