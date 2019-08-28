@@ -23,96 +23,7 @@ local function GetPosition(time,start,goal)
     local size = 1-(1-time)*(1-time)
     return x,y,z,size
 end
-local function Drawnote(type,start,goal,time)--種類、出現位置、到着位置、経過時間
-    obj.load("image",obj.getinfo("script_path").."image\\note\\notes.png")
-    local nox,noy,noz,size =GetPosition(time,start,goal)
-    if(type=='1')then
-        type=220
-    elseif(type=='2')then
-        type=0
-    elseif(type=='3')then
-        type=330
-    elseif(type=='4')then
-        type=110
-    elseif(type=='5')then
-        type=440
-    else
-        type=0
-    end
-    obj.drawpoly(nox-77*size,noy-55*size,noz,nox+77*size,noy-55*size,noz,nox+77*size,noy+55*size,noz,nox-77*size,noy+55*size,noz,154*obj.track0,type,154*(1+obj.track0),type,154*(1+obj.track0),type+110,154*obj.track0,type+110)
-    return nil
-end
-local function Drawlong(start,goal,st,gt)
-    local k=40
-    local time=0
-    local k2=0
-    obj.setoption("drawtarget","tempbuffer",1280,720)
-    obj.setoption("blend","alpha_add")
-    if(gt>1)then
-        k2=(gt-1)/3
-    end
-    for i=0,k-1 do
-        if(st < (i+1)/k and i/k < gt) then
-            obj.load("figure","四角形",HSV(0,0,80))
-            if(st<i/k) then
-                time=i/k
-            else
-                time=st
-            end
-            local x1,y1,z1,size1 =GetPosition(time,start,goal)
-            if((i+1)/k<gt) then
-                time=(i+1)/k
-            else
-                time=gt
-            end
-            local x2,y2,z2,size2 =GetPosition(time,start,goal)
-            obj.setoption("drawtarget","tempbuffer")
-            if(obj.track0==3)then
-                obj.effect("グラデーション","color",HSV(math.floor((i/k+k2)*360+goal*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+goal*20+100)%360,30,90))
-            end
-            obj.drawpoly(x1-48*size1,y1,z1,x1+48*size1,y1,z1,x2+48*size2,y2,z2,x2-48*size2,y2,z2)
-        end
-    end
-    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
-    obj.load("tempbuffer")
-    obj.draw(0,0,0,1,0.8) 
-end
-local function Drawflick(time1,start1,goal1,time2,start2,goal2)
-    local k2=0
-    local x1,y1,z1,size1 =GetPosition(time1,start1,goal1)
-    if(time1>1)then
-        x1,k2,k2,size1 =GetPosition(1,start1,goal1)
-        k2=time1-1    
-    end
-    if(time2<0)then
-        time2=0
-    end
-    local x2,y2,z2,size2 =GetPosition(time2,start2,goal2)
-    local sinx=(y1-y2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
-    local cosx=(x1-x2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
-    obj.setoption("drawtarget","tempbuffer",1280,720)
-    obj.load("figure","四角形",HSV(0,0,80))
-    obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2)
-    obj.load("tempbuffer")
-    if(obj.track0==3)then
-        obj.setoption("drawtarget","tempbuffer",2560,720)
-        obj.setoption("blend","alpha_add")
-        obj.draw(640,0)
-        local k=60
-        for i=1,k-1 do
-            local y= 600*i/k -300
-            obj.load("tempbuffer",1280,y+360,1280,500/k+2)
-            obj.effect("グラデーション","color",HSV(math.floor((i/k+k2)*360+goal1*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+goal1*20+100)%360,30,90))
-            obj.setoption("drawtarget","tempbuffer")
-            obj.setoption("blend","alpha_add")
-            obj.draw(-640,y+250/k+1)    
-        end
-        obj.load("tempbuffer",0,0,1280,720)
-    end
-    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
-    obj.effect("斜めクリッピング","中心Y",-30,"ぼかし",40,"幅",540)
-    obj.draw(0,0,0,1,0.8)
-end
+
 local combo=0
 local bpm={}
 local offset=0
@@ -188,7 +99,7 @@ for line in io.lines(file) do
                         longstack[goal+5]={(notime-t)/speed+1,i,start}
                     end
                     if(not(flicklast[canel] and flicklast[canel][1] > (notime-t)/speed+1))then
-                        flicklast[canel+1]={(notime-t)/speed+1,i,start,goal}
+                        flicklast[canel]={(notime-t)/speed+1,i,start,goal}
                     end    
                 end
                 j=j+1
@@ -222,6 +133,7 @@ for i=1,#notestack do --time,type,start,goal,canel
         longstack[goal]=time
     end
     if(flickstack[canel])then
+        --debug_print("stack:"..flickstack[canel][1]..",time:"..time..",type:"..type)
         if(type=='1' or type=='3')then
             if(canel%4>1 or (flickstack[canel][2]=='1' and flickstack[canel][4]>goal)or(flickstack[canel][2]=='3' and flickstack[canel][4]<goal))then
                 table.insert(flickpair,{flickstack[canel][1],flickstack[canel][3],flickstack[canel][4],time,start,goal})
@@ -238,6 +150,86 @@ for i=1,5 do
         table.insert(longpair,{longstack[i+5][3],i,longstack[i+5][1],longstack[i]})
     end
 end
+for canel,stack in  pairs(flickstack) do
+    if(flicklast[canel] and(flicklast[canel][2]=='1' or flicklast[canel][2]=='3'))then
+            if(canel%4>1 or (stack[2]=='1' and stack[4]>flicklast[canel][4])or(stack[2]=='3' and stack[4]<flicklast[canel][4]))then
+                table.insert(flickpair,{stack[1],stack[3],stack[4],flicklast[canel][1],flicklast[canel][3],flicklast[canel][4]})
+            end
+        end    
+end
+local function Drawlong(start,goal,st,gt)
+    local k=40
+    local time=0
+    local k2=0
+    obj.setoption("drawtarget","tempbuffer",1280,720)
+    obj.setoption("blend","alpha_add")
+    if(gt>1)then
+        k2=(gt-1)/3
+    end
+    for i=0,k-1 do
+        if(st < (i+1)/k and i/k < gt) then
+            obj.load("figure","四角形",HSV(0,0,80))
+            if(st<i/k) then
+                time=i/k
+            else
+                time=st
+            end
+            local x1,y1,z1,size1 =GetPosition(time,start,goal)
+            if((i+1)/k<gt) then
+                time=(i+1)/k
+            else
+                time=gt
+            end
+            local x2,y2,z2,size2 =GetPosition(time,start,goal)
+            obj.setoption("drawtarget","tempbuffer")
+            if(obj.track0==3)then
+                obj.effect("グラデーション","color",HSV(math.floor((i/k+k2)*360+goal*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+goal*20+100)%360,30,90))
+            end
+            obj.drawpoly(x1-48*size1,y1,z1,x1+48*size1,y1,z1,x2+48*size2,y2,z2,x2-48*size2,y2,z2)
+        end
+    end
+    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
+    obj.load("tempbuffer")
+    obj.draw(0,0,0,1,0.8) 
+end
+local function Drawflick(time1,start1,goal1,time2,start2,goal2)
+    local k2=0
+    local x1,y1,z1,size1 =GetPosition(time1,start1,goal1)
+    if(time1>1)then
+        x1,k2,k2,size1 =GetPosition(1,start1,goal1)
+        k2=time1-1    
+    end
+    if(time2<0)then
+        time2=0
+    end
+    local x2,y2,z2,size2 =GetPosition(time2,start2,goal2)
+    local sinx=(y1-y2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
+    local cosx=(x1-x2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
+    obj.setoption("drawtarget","tempbuffer",1280,720)
+    obj.load("figure","四角形",HSV(0,0,80))
+    obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2)
+    obj.load("tempbuffer")
+    if(obj.track0==3)then
+        obj.setoption("drawtarget","tempbuffer",2560,720)
+        obj.setoption("blend","alpha_add")
+        obj.draw(640,0)
+        local k=60
+        for i=1,k-1 do
+            local y= 600*i/k -300
+            obj.load("tempbuffer",1280,y+360,1280,500/k+2)
+            obj.effect("グラデーション","color",HSV(math.floor((i/k+k2)*360+goal1*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+goal1*20+100)%360,30,90))
+            obj.setoption("drawtarget","tempbuffer")
+            obj.setoption("blend","alpha_add")
+            obj.draw(-640,y+250/k+1)    
+        end
+        obj.load("tempbuffer",0,0,1280,720)
+    end
+    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
+    obj.effect("斜めクリッピング","中心Y",-30,"ぼかし",40,"幅",540)
+    obj.draw(0,0,0,1,0.8)
+end
+
+
 for i=1,#longpair do
     --debug_print(longpair[i][1]..','..longpair[i][2]..','..longpair[i][3]..','..longpair[i][4])
     Drawlong(longpair[i][1],longpair[i][2],longpair[i][3],longpair[i][4])
@@ -245,6 +237,26 @@ end
 for i=1,#flickpair do
     --debug_print(flickpair[i][1]..','..flickpair[i][2]..','..flickpair[i][3]..','..flickpair[i][4]..','..flickpair[i][5]..','..flickpair[i][6])
     Drawflick(flickpair[i][1],flickpair[i][2],flickpair[i][3],flickpair[i][4],flickpair[i][5],flickpair[i][6])
+end
+
+local function Drawnote(type,start,goal,time)--種類、出現位置、到着位置、経過時間
+    obj.load("image",obj.getinfo("script_path").."image\\note\\notes.png")
+    local nox,noy,noz,size =GetPosition(time,start,goal)
+    if(type=='1')then
+        type=220
+    elseif(type=='2')then
+        type=0
+    elseif(type=='3')then
+        type=330
+    elseif(type=='4')then
+        type=110
+    elseif(type=='5')then
+        type=440
+    else
+        type=0
+    end
+    obj.drawpoly(nox-77*size,noy-55*size,noz,nox+77*size,noy-55*size,noz,nox+77*size,noy+55*size,noz,nox-77*size,noy+55*size,noz,154*obj.track0,type,154*(1+obj.track0),type,154*(1+obj.track0),type+110,154*obj.track0,type+110)
+    return nil
 end
 
 for i=1,#notestack do
