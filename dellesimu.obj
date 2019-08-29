@@ -157,6 +157,11 @@ for canel,stack in  pairs(flickstack) do
             end
         end    
 end
+
+for i=1,math.floor(#notestack) do
+    notestack[i],notestack[#notestack-i+1]=notestack[#notestack-i+1],notestack[i]
+end
+
 local function Drawlong(start,goal,st,gt)
     local k=40
     local time=0
@@ -192,51 +197,48 @@ local function Drawlong(start,goal,st,gt)
     obj.load("tempbuffer")
     obj.draw(0,0,0,1,0.8) 
 end
-local function Drawflick(time1,start1,goal1,time2,start2,goal2)
-    local k2=0
-    local x1,y1,z1,size1 =GetPosition(time1,start1,goal1)
-    if(time1>1)then
-        x1,k2,k2,size1 =GetPosition(1,start1,goal1)
-        k2=time1-1    
-    end
-    if(time2<0)then
-        time2=0
-    end
-    local x2,y2,z2,size2 =GetPosition(time2,start2,goal2)
-    local sinx=(y1-y2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
-    local cosx=(x1-x2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
-    obj.setoption("drawtarget","tempbuffer",1280,720)
-    obj.load("figure","四角形",HSV(0,0,80))
-    obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2)
-    obj.load("tempbuffer")
-    if(obj.track0==3)then
-        obj.setoption("drawtarget","tempbuffer",2560,720)
-        obj.setoption("blend","alpha_add")
-        obj.draw(640,0)
-        local k=60
-        for i=1,k-1 do
-            local y= 600*i/k -300
-            obj.load("tempbuffer",1280,y+360,1280,500/k+2)
-            obj.effect("グラデーション","color",HSV(math.floor((i/k+k2)*360+goal1*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+goal1*20+100)%360,30,90))
-            obj.setoption("drawtarget","tempbuffer")
-            obj.setoption("blend","alpha_add")
-            obj.draw(-640,y+250/k+1)    
-        end
-        obj.load("tempbuffer",0,0,1280,720)
-    end
-    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
-    obj.effect("斜めクリッピング","中心Y",-30,"ぼかし",40,"幅",540)
-    obj.draw(0,0,0,1,0.8)
-end
 
 
 for i=1,#longpair do
     --debug_print(longpair[i][1]..','..longpair[i][2]..','..longpair[i][3]..','..longpair[i][4])
     Drawlong(longpair[i][1],longpair[i][2],longpair[i][3],longpair[i][4])
 end
-for i=1,#flickpair do
-    --debug_print(flickpair[i][1]..','..flickpair[i][2]..','..flickpair[i][3]..','..flickpair[i][4]..','..flickpair[i][5]..','..flickpair[i][6])
-    Drawflick(flickpair[i][1],flickpair[i][2],flickpair[i][3],flickpair[i][4],flickpair[i][5],flickpair[i][6])
+
+if(flickpair) then --time1,start1,goal1
+    local k=60
+    obj.setoption("drawtarget","tempbuffer",60/k,120)
+    obj.setoption("blend","alpha_add")
+    for i=1,k*2-1 do
+        obj.load("figure","四角形",HSV(0,0,80),60/k)
+        if(obj.track0==3)then
+            obj.effect("グラデーション","color",HSV(math.floor((i/k)*360+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k)*360+100)%360,30,90))
+        end
+        obj.setoption("drawtarget","tempbuffer")
+        obj.setoption("blend","alpha_add")
+        obj.draw(0,60-((i+0.5)/k)*60)    
+    end
+    obj.load("tempbuffer")
+    obj.setoption("drawtarget","tempbuffer",1280,720)
+    for i=1,#flickpair do
+        local k2=0
+        local x1,y1,z1,size1 =GetPosition(flickpair[i][1],flickpair[i][2],flickpair[i][3])
+        if(flickpair[i][1]>1)then
+            x1,k2,k2,size1 =GetPosition(1,flickpair[i][2],flickpair[i][3])
+            k2=flickpair[i][1]-1    
+        end
+        if(flickpair[i][4]<0)then
+            flickpair[i][4]=0
+        end
+        local x2,y2,z2,size2 =GetPosition(flickpair[i][4],flickpair[i][5],flickpair[i][6])
+        local sinx=(y1-y2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
+        local cosx=(x1-x2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
+        obj.setoption("drawtarget","tempbuffer")
+        obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2,0,(1-flickpair[i][1])*60+flickpair[i][3]*5,obj.w,(1-flickpair[i][1])*60+flickpair[i][3]*5,obj.w,(1-flickpair[i][4])*60+flickpair[i][3]*5,0,(1-flickpair[i][4])*60+flickpair[i][3]*5)
+    end
+    obj.load("tempbuffer")
+    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
+    obj.effect("斜めクリッピング","中心Y",-30,"ぼかし",40,"幅",540)
+    obj.draw(0,0,0,1,0.8)
 end
 
 local function Drawnote(type,start,goal,time)--種類、出現位置、到着位置、経過時間
