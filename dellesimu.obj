@@ -3,23 +3,14 @@
 --track2:ŠJnˆÊ’u,0,1500,0,0.01
 --file:
 
-obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
-obj.effect("ƒNƒŠƒbƒsƒ“ƒO","ã",142*obj.track0,"‰º",142*(3-obj.track0),"’†S‚ÌˆÊ’u‚ğ•ÏX",1)
-obj.draw(0,240,0,0.96)
+
 
 
 local function GetPosition(time,start,goal)
-    local k=0.18
-    if(time<k)then
-        k=time
-    end
-    local y=3000*(k-0.1)*(k-0.1)-335
-    if(time>k)then
-        y= 240 +(y-240)*(1-time)/(1-k)
-    end
-    k =0.5
-    local z=400*k*((1+k)/(time+k)-1)
-    local x=197*(start*z/400+goal*(1-z/400)-3)
+    local y =750*(time-1)+220+21.4/(time+0.07)
+    local k =0.50
+    local z =250*k*((1+k)/(time+k)-1)+100*(1-math.sqrt(time))
+    local x =197*(start*z/350+goal*(1-z/350)-3)
     local size = 1-(1-time)*(1-time)
     return x,y,z,size
 end
@@ -57,9 +48,11 @@ end
 
 local longstack={}
 local flickstack={}
+local slidestack={}
 local flicklast={}
 local longpair={}
 local flickpair={}
+local slidepair={}
 local notestack={}
 
 for line in io.lines(file) do
@@ -134,16 +127,23 @@ for i=1,#notestack do --time,type,start,goal,canel
     end
     if(flickstack[canel])then
         --debug_print("stack:"..flickstack[canel][1]..",time:"..time..",type:"..type)
-        if(type=='1' or type=='3')then
+        if(flickstack[canel][2]=='5')then
+            table.insert(slidepair,{flickstack[canel][1],flickstack[canel][3],flickstack[canel][4],time,start,goal})
+            if(type=='5')then
+                notestack[i][2]='6'
+            elseif(type=='2')then
+                notestack[i][2]='5'
+            end
+        elseif(type=='1' or type=='3')then
             if(canel%4>1 or (flickstack[canel][2]=='1' and flickstack[canel][4]>goal)or(flickstack[canel][2]=='3' and flickstack[canel][4]<goal))then
                 table.insert(flickpair,{flickstack[canel][1],flickstack[canel][3],flickstack[canel][4],time,start,goal})
             end
         end
         flickstack[canel]=nil
     end
-    if(type=='1' or type=='3')then
+    if(type=='1' or type=='3' or type=='5')then
         flickstack[canel]={time,type,start,goal}
-    end    
+    end       
 end
 for i=1,5 do
     if(longstack[i] and longstack[i+5]) then
@@ -151,21 +151,27 @@ for i=1,5 do
     end
 end
 for canel,stack in  pairs(flickstack) do
-    if(flicklast[canel] and(flicklast[canel][2]=='1' or flicklast[canel][2]=='3'))then
+    if(flicklast[canel])then
+        if(stack[2]=='5')then
+            table.insert(slidepair,{stack[1],stack[3],stack[4],flicklast[canel][1],flicklast[canel][3],flicklast[canel][4]})
+        elseif(flicklast[canel][2]=='1' or flicklast[canel][2]=='3')then
             if(canel%4>1 or (stack[2]=='1' and stack[4]>flicklast[canel][4])or(stack[2]=='3' and stack[4]<flicklast[canel][4]))then
                 table.insert(flickpair,{stack[1],stack[3],stack[4],flicklast[canel][1],flicklast[canel][3],flicklast[canel][4]})
             end
-        end    
+        end
+    end    
 end
 
-for i=1,math.floor(#notestack) do
+for i=1,math.floor(#notestack/2) do
     notestack[i],notestack[#notestack-i+1]=notestack[#notestack-i+1],notestack[i]
 end
 
-local function Drawlong(start,goal,st,gt)
+local function Drawlong(st,sts,stg,gt,gts,gtg)
     local k=40
     local time=0
     local k2=0
+    gts= gts or sts
+    gtg= gtg or stg
     obj.setoption("drawtarget","tempbuffer",1280,720)
     obj.setoption("blend","alpha_add")
     if(gt>1)then
@@ -179,16 +185,24 @@ local function Drawlong(start,goal,st,gt)
             else
                 time=st
             end
-            local x1,y1,z1,size1 =GetPosition(time,start,goal)
+            local start=(sts*(gt-time)+gts*(time-st))/(gt-st)
+            if(st<0)then
+                start=(sts*(gt-time)+gts*time)/gt
+            end
+            local x1,y1,z1,size1 =GetPosition(time,start,(stg*(gt-time)+gtg*(time-st))/(gt-st))
             if((i+1)/k<gt) then
                 time=(i+1)/k
             else
                 time=gt
             end
-            local x2,y2,z2,size2 =GetPosition(time,start,goal)
+            start=(sts*(gt-time)+gts*(time-st))/(gt-st)
+            if(st<0)then
+                start=(sts*(gt-time)+gts*time)/gt
+            end
+            local x2,y2,z2,size2 =GetPosition(time,start,(stg*(gt-time)+gtg*(time-st))/(gt-st))
             obj.setoption("drawtarget","tempbuffer")
             if(obj.track0==3)then
-                obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(math.floor((i/k+k2)*360+goal*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+goal*20+100)%360,30,90))
+                obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(math.floor((i/k+k2)*360+stg*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+stg*20+100)%360,30,90))
             end
             obj.drawpoly(x1-48*size1,y1,z1,x1+48*size1,y1,z1,x2+48*size2,y2,z2,x2-48*size2,y2,z2)
         end
@@ -201,7 +215,12 @@ end
 
 for i=1,#longpair do
     --debug_print(longpair[i][1]..','..longpair[i][2]..','..longpair[i][3]..','..longpair[i][4])
-    Drawlong(longpair[i][1],longpair[i][2],longpair[i][3],longpair[i][4])
+    Drawlong(longpair[i][3],longpair[i][1],longpair[i][2],longpair[i][4])
+end
+
+for i=1,#slidepair do
+    debug_print("slide:"..slidepair[i][1]..','..slidepair[i][2]..','..slidepair[i][3]..','..slidepair[i][4]..','..slidepair[i][5]..','..slidepair[i][6])
+    Drawlong(slidepair[i][4],slidepair[i][5],slidepair[i][6],slidepair[i][1],slidepair[i][2],slidepair[i][3])
 end
 
 if(flickpair) then --time1,start1,goal1
@@ -233,13 +252,17 @@ if(flickpair) then --time1,start1,goal1
         local sinx=(y1-y2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
         local cosx=(x1-x2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
         obj.setoption("drawtarget","tempbuffer")
-        obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2,0,(1-flickpair[i][1])*60+flickpair[i][3]*5,obj.w,(1-flickpair[i][1])*60+flickpair[i][3]*5,obj.w,(1-flickpair[i][4])*60+flickpair[i][3]*5,0,(1-flickpair[i][4])*60+flickpair[i][3]*5)
+        obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2,0,(1-flickpair[i][1])*60+flickpair[i][3]*3,obj.w,(1-flickpair[i][1])*60+flickpair[i][3]*3,obj.w,(1-flickpair[i][4])*60+flickpair[i][3]*3,0,(1-flickpair[i][4])*60+flickpair[i][3]*3)
     end
     obj.load("tempbuffer")
     obj.setoption("drawtarget","framebuffer")  --‚±‚ê‚ª‚È‚¢‚ÆŸ‚Ìobj.draw‚Å‚à‰¼‘zƒoƒbƒtƒ@‚É•`‰æ‚µ‚Ä‚µ‚Ü‚¤
     obj.effect("Î‚ßƒNƒŠƒbƒsƒ“ƒO","’†SY",-30,"‚Ú‚©‚µ",40,"•",540)
     obj.draw(0,0,0,1,0.8)
 end
+
+obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
+obj.effect("ƒNƒŠƒbƒsƒ“ƒO","ã",142*obj.track0,"‰º",142*(3-obj.track0),"’†S‚ÌˆÊ’u‚ğ•ÏX",1)
+obj.draw(0,240,0,0.96)
 
 local function Drawnote(type,start,goal,time)--í—ŞAoŒ»ˆÊ’uA“’…ˆÊ’uAŒo‰ßŠÔ
     obj.load("image",obj.getinfo("script_path").."image\\note\\notes.png")
@@ -254,6 +277,8 @@ local function Drawnote(type,start,goal,time)--í—ŞAoŒ»ˆÊ’uA“’…ˆÊ’uAŒo‰ßŠ
         type=110
     elseif(type=='5')then
         type=440
+    elseif(type=='6')then
+        type=550
     else
         type=0
     end
