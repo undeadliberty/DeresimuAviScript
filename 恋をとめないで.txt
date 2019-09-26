@@ -5,8 +5,8 @@
 //#Song —ö‚ð‚Æ‚ß‚È‚¢‚Åfeat‚è‚ñ‚Ì‚Ì.wav
 //#Lyrics —ö‚ð‚Æ‚ß‚È‚¢‚Å.lrc
 #BPM 175.00
-#Offset 5334
-#SongOffset 5334
+#Offset 1500
+#SongOffset 1500
 #Difficulty Master
 #LV 26
 #BGMVol 100
