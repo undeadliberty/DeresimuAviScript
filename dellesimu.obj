@@ -1,9 +1,11 @@
---track0:属性,0,3,0,1
+--track0:ノーツタイプ,0,3,0,1
 --track1:落下速度,1,10,8,0.1
 --track2:開始位置,0,1500,0,0.01
+--track3:演出設定,0,5,5,1
 --file:
 
-
+--コンボ表示　大 0,1 小 2,3 無 4,5
+--エフェクト表示　有 0,2,4 無 1,3,5
 
 
 local function GetPosition(time,start,goal)
@@ -55,6 +57,7 @@ local flickpair={}
 local slidepair={}
 local notestack={}
 
+
 for line in io.lines(file) do
     if(string.match(line,"^#BPM")) then
         bpm[1]={0,tonumber(string.match(line,"[0-9.]+"))}
@@ -78,8 +81,8 @@ for line in io.lines(file) do
                 local start=tonumber(string.sub(sg,j,j))
                 local goal=tonumber(string.sub(eg,j,j))
                 if(notime > t) then                   
-                    if(not(longstack[goal] and longstack[goal][1] < (notime-t)/speed+1))then
-                        longstack[goal]={(notime-t)/speed+1,i}
+                    if(not(longstack[goal] and longstack[goal][1] < notime-t))then
+                        longstack[goal]={notime-t,i}
                     end
                     if(not(flickstack[canel] and flickstack[canel][1] < (notime-t)/speed+1))then
                         flickstack[canel]={(notime-t)/speed+1,i,start,goal}
@@ -102,12 +105,18 @@ for line in io.lines(file) do
     end
 end
 
+local lastap={}
+local holdstack={}
+
 table.sort(notestack,function(a,b)return a[1]>b[1] end)
 for i=1,5 do
-    if(longstack[i] and longstack[i][2]=='4') then
-        longstack[i]=longstack[i][1]   
-    else
-        longstack[i]=nil
+    if(longstack[i])then
+        lastap[i]=longstack[i][1]
+        if(longstack[i][2]=='4') then
+            longstack[i]=longstack[i][1]/speed+1   
+        else
+            longstack[i]=nil
+        end
     end
 end
 for i=1,#notestack do --time,type,start,goal,canel
@@ -170,12 +179,22 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
     local k=40
     local time=0
     local k2=0
-    gts= gts or sts
-    gtg= gtg or stg
+    local holdflag = true
+    if(not gtg)then
+        gts = sts
+        gtg = stg
+        holdflag = false
+    end
+    local p=2
+    local sinx=-p/math.sqrt((sts-gts)*(sts-gts)+p*p)
+    local cosx=(sts-gts)/math.sqrt((sts-gts)*(sts-gts)+p*p)
     obj.setoption("drawtarget","tempbuffer",1280,720)
     obj.setoption("blend","alpha_add")
     if(gt>1)then
         k2=(gt-1)/3
+        if(holdflag)then
+            table.insert(holdstack,(stg*(gt-1)+gtg*(1-st))/(gt-st))
+        end
     end
     for i=0,k-1 do
         if(st < (i+1)/k and i/k < gt) then
@@ -186,25 +205,37 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
                 time=st
             end
             local start=(sts*(gt-time)+gts*(time-st))/(gt-st)
+            local goal=(stg*(gt-time)+gtg*(time-st))/(gt-st)
             if(st<0)then
                 start=(sts*(gt-time)+gts*time)/gt
             end
-            local x1,y1,z1,size1 =GetPosition(time,start,(stg*(gt-time)+gtg*(time-st))/(gt-st))
+            if(gt>1)then
+                goal=(stg*(1-time)+goal*time)/1
+            else
+                goal= (stg*(gt-time)+goal*time)/gt
+            end
+            local x1,y1,z1,size1 =GetPosition(time,start,goal)
             if((i+1)/k<gt) then
                 time=(i+1)/k
             else
                 time=gt
             end
             start=(sts*(gt-time)+gts*(time-st))/(gt-st)
+            goal=(stg*(gt-time)+gtg*(time-st))/(gt-st)
             if(st<0)then
                 start=(sts*(gt-time)+gts*time)/gt
             end
-            local x2,y2,z2,size2 =GetPosition(time,start,(stg*(gt-time)+gtg*(time-st))/(gt-st))
+            if(gt>1)then
+                goal=(stg*(1-time)+goal*time)/1
+            else
+                goal= (stg*(gt-time)+goal*time)/gt
+            end
+            local x2,y2,z2,size2 =GetPosition(time,start,goal)
             obj.setoption("drawtarget","tempbuffer")
             if(obj.track0==3)then
                 obj.effect("グラデーション","color",HSV(math.floor((i/k+k2)*360+stg*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+stg*20+100)%360,30,90))
             end
-            obj.drawpoly(x1-48*size1,y1,z1,x1+48*size1,y1,z1,x2+48*size2,y2,z2,x2-48*size2,y2,z2)
+            obj.drawpoly(x1-48*size1*sinx,y1+48*size1*cosx,z1,x1+48*size1*sinx,y1-48*size1*cosx,z1,x2+48*size2*sinx,y2-48*size2*cosx,z2,x2-48*size2*sinx,y2+48*size2*cosx,z2)
         end
     end
     obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
@@ -219,7 +250,7 @@ for i=1,#longpair do
 end
 
 for i=1,#slidepair do
-    debug_print("slide:"..slidepair[i][1]..','..slidepair[i][2]..','..slidepair[i][3]..','..slidepair[i][4]..','..slidepair[i][5]..','..slidepair[i][6])
+    --debug_print("slide:"..slidepair[i][1]..','..slidepair[i][2]..','..slidepair[i][3]..','..slidepair[i][4]..','..slidepair[i][5]..','..slidepair[i][6])
     Drawlong(slidepair[i][4],slidepair[i][5],slidepair[i][6],slidepair[i][1],slidepair[i][2],slidepair[i][3])
 end
 
@@ -300,6 +331,9 @@ for i=1,#notestack do
         obj.drawpoly(x1+48*size,y1-5*size,z1,x2-48*size,y1-5*size,z1,x2-48*size,y1+5*size,z1,x1+48*size,y1+5*size,z1)
     end
     Drawnote(notestack[i][2],notestack[i][3],notestack[i][4],notestack[i][1])
+end
+for i=1,#holdstack do
+    Drawnote('5',holdstack[i],holdstack[i],1)    
 end
 if(combo>1) then
     obj.setfont("Arial Black",100,4,0xffffff,0xffb400)
