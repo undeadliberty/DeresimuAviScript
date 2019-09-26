@@ -1,4 +1,4 @@
---track0:ノーツタイプ,0,3,0,1
+--track0:ノーツ,0,3,0,1
 --track1:落下速度,1,10,8,0.1
 --track2:開始位置,0,1500,0,0.01
 --track3:演出設定,0,5,5,1
@@ -185,16 +185,13 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
         gtg = stg
         holdflag = false
     end
-    local p=2
+    local p=1.5
     local sinx=-p/math.sqrt((sts-gts)*(sts-gts)+p*p)
     local cosx=(sts-gts)/math.sqrt((sts-gts)*(sts-gts)+p*p)
     obj.setoption("drawtarget","tempbuffer",1280,720)
     obj.setoption("blend","alpha_add")
     if(gt>1)then
         k2=(gt-1)/3
-        if(holdflag)then
-            table.insert(holdstack,(stg*(gt-1)+gtg*(1-st))/(gt-st))
-        end
     end
     for i=0,k-1 do
         if(st < (i+1)/k and i/k < gt) then
@@ -232,27 +229,51 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
             end
             local x2,y2,z2,size2 =GetPosition(time,start,goal)
             obj.setoption("drawtarget","tempbuffer")
-            if(obj.track0==3)then
+            if(obj.track0==0)then
+                obj.effect("グラデーション","color",HSV(325+5*math.sin((i/k+k2)*2*math.pi+stg/3),80+20*math.sin((i/k+k2)*2*math.pi+stg/3),100),"color2",HSV(325+5*math.sin((i/k+k2)*2*math.pi+stg/3),80+20*math.sin(((i+1)/k+k2)*2*math.pi+stg/3),100))
+            elseif(obj.track0==1)then
+                obj.effect("グラデーション","color",HSV(200+10*math.sin((i/k+k2)*2*math.pi+stg/3),80+20*math.sin((i/k+k2)*2*math.pi+stg/3),100),"color2",HSV(200+10*math.sin((i/k+k2)*2*math.pi+stg/3),80+20*math.sin(((i+1)/k+k2)*2*math.pi+stg/3),100))
+            elseif(obj.track0==2)then
+                obj.effect("グラデーション","color",HSV(40-5*math.sin((i/k+k2)*2*math.pi+stg/3),70+10*math.sin((i/k+k2)*2*math.pi+stg/3),100),"color2",HSV(40-5*math.sin((i/k+k2)*2*math.pi+stg/3),70+10*math.sin(((i+1)/k+k2)*2*math.pi+stg/3),100))
+            elseif(obj.track0==3)then
                 obj.effect("グラデーション","color",HSV(math.floor((i/k+k2)*360+stg*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+stg*20+100)%360,30,90))
             end
             obj.drawpoly(x1-48*size1*sinx,y1+48*size1*cosx,z1,x1+48*size1*sinx,y1-48*size1*cosx,z1,x2+48*size2*sinx,y2-48*size2*cosx,z2,x2-48*size2*sinx,y2+48*size2*cosx,z2)
         end
+    end
+    if(gt>1)then
+        local goal=(stg*(gt-1)+gtg*(1-st))/(gt-st)
+        local x,y,z,size=GetPosition(1,goal,goal)
+        obj.load("figure","円")
+        if(holdflag)then
+            table.insert(holdstack,goal)
+        else
+            size=size+0.3
+            obj.effect("境界ぼかし","範囲",12,"透明度の境界をぼかす",1)
+        end
+        obj.setoption("blend","alpha_sub")
+        obj.draw(x,y,z,size)   
+    else
+        local x,y,z,size=GetPosition(gt,gts,gtg)
+        obj.load("figure","円")
+        obj.setoption("blend","alpha_sub")
+        obj.drawpoly(x-50*size,y-50*size,z,x+50*size,y-50*size,z,x+50*size,y+50*size,z,x-50*size,y+50*size,z)
+    end
+    if(st>0)then
+        local x,y,z,size=GetPosition(st,sts,stg)
+        obj.load("figure","円")
+        obj.setoption("blend","alpha_sub")
+        obj.drawpoly(x-50*size,y-50*size,z,x+50*size,y-50*size,z,x+50*size,y+50*size,z,x-50*size,y+50*size,z)    
     end
     obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
     obj.load("tempbuffer")
     obj.draw(0,0,0,1,0.8) 
 end
 
+obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
+obj.effect("クリッピング","上",142*obj.track0,"下",142*(3-obj.track0),"中心の位置を変更",1)
+obj.draw(0,240,0,0.96)
 
-for i=1,#longpair do
-    --debug_print(longpair[i][1]..','..longpair[i][2]..','..longpair[i][3]..','..longpair[i][4])
-    Drawlong(longpair[i][3],longpair[i][1],longpair[i][2],longpair[i][4])
-end
-
-for i=1,#slidepair do
-    --debug_print("slide:"..slidepair[i][1]..','..slidepair[i][2]..','..slidepair[i][3]..','..slidepair[i][4]..','..slidepair[i][5]..','..slidepair[i][6])
-    Drawlong(slidepair[i][4],slidepair[i][5],slidepair[i][6],slidepair[i][1],slidepair[i][2],slidepair[i][3])
-end
 
 if(flickpair) then --time1,start1,goal1
     local k=60
@@ -260,7 +281,13 @@ if(flickpair) then --time1,start1,goal1
     obj.setoption("blend","alpha_add")
     for i=1,k*2-1 do
         obj.load("figure","四角形",HSV(0,0,80),60/k)
-        if(obj.track0==3)then
+        if(obj.track0==0)then
+            obj.effect("グラデーション","color",HSV(325+5*math.sin((i/k)*2*math.pi),80+20*math.sin((i/k)*2*math.pi),100),"color2",HSV(325+5*math.sin((i/k)*2*math.pi),80+20*math.sin(((i+1)/k)*2*math.pi),100))
+        elseif(obj.track0==1)then
+            obj.effect("グラデーション","color",HSV(200+10*math.sin((i/k)*2*math.pi),80+20*math.sin((i/k)*2*math.pi),100),"color2",HSV(200+10*math.sin((i/k)*2*math.pi),80+20*math.sin(((i+1)/k)*2*math.pi),100))
+        elseif(obj.track0==2)then
+            obj.effect("グラデーション","color",HSV(40-5*math.sin((i/k)*2*math.pi),70+10*math.sin((i/k)*2*math.pi),100),"color2",HSV(40-5*math.sin((i/k)*2*math.pi),70+10*math.sin(((i+1)/k)*2*math.pi),100))
+        elseif(obj.track0==3)then
             obj.effect("グラデーション","color",HSV(math.floor((i/k)*360+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k)*360+100)%360,30,90))
         end
         obj.setoption("drawtarget","tempbuffer")
@@ -291,9 +318,15 @@ if(flickpair) then --time1,start1,goal1
     obj.draw(0,0,0,1,0.8)
 end
 
-obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
-obj.effect("クリッピング","上",142*obj.track0,"下",142*(3-obj.track0),"中心の位置を変更",1)
-obj.draw(0,240,0,0.96)
+for i=1,#longpair do
+    --debug_print(longpair[i][1]..','..longpair[i][2]..','..longpair[i][3]..','..longpair[i][4])
+    Drawlong(longpair[i][3],longpair[i][1],longpair[i][2],longpair[i][4])
+end
+
+for i=1,#slidepair do
+    --debug_print("slide:"..slidepair[i][1]..','..slidepair[i][2]..','..slidepair[i][3]..','..slidepair[i][4]..','..slidepair[i][5]..','..slidepair[i][6])
+    Drawlong(slidepair[i][4],slidepair[i][5],slidepair[i][6],slidepair[i][1],slidepair[i][2],slidepair[i][3])
+end
 
 local function Drawnote(type,start,goal,time)--種類、出現位置、到着位置、経過時間
     obj.load("image",obj.getinfo("script_path").."image\\note\\notes.png")
