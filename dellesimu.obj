@@ -1,7 +1,8 @@
---track0:ノーツ,0,3,0,1
+--track0:0:ノーツ,0,3,0,1
 --track1:落下速度,1,10,8,0.1
---track2:開始位置,0,1500,0,0.01
---track3:演出設定,0,5,5,1
+--track2:開始位置,-10,300,0,0.01
+--track3:演出設定,0,5,1,1
+--check0:リング表示,1
 --file:
 
 --コンボ表示　大 0,1 小 2,3 無 4,5
@@ -186,8 +187,8 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
         holdflag = false
     end
     local p=1.5
-    local sinx=-p/math.sqrt((sts-gts)*(sts-gts)+p*p)
-    local cosx=(sts-gts)/math.sqrt((sts-gts)*(sts-gts)+p*p)
+    local sinx=-p/math.sqrt((stg-gtg)*(stg-gtg)+p*p)
+    local cosx=(stg-gtg)/math.sqrt((stg-gtg)*(stg-gtg)+p*p)
     obj.setoption("drawtarget","tempbuffer",1280,720)
     obj.setoption("blend","alpha_add")
     if(gt>1)then
@@ -298,10 +299,11 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
     end
 end
 
-obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
-obj.effect("クリッピング","上",142*obj.track0,"下",142*(3-obj.track0),"中心の位置を変更",1)
-obj.draw(0,240,0,0.96)
-
+if(obj.check0)then
+    obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
+    obj.effect("クリッピング","上",142*obj.track0,"下",142*(3-obj.track0),"中心の位置を変更",1)
+    obj.draw(0,240,0,0.96)
+end
 
 local tapper=0.4
 for i=0,5 do
