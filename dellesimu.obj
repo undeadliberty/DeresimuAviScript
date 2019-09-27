@@ -1,4 +1,4 @@
---track0:0:ノーツ,0,3,0,1
+--track0:ノーツ,0,3,0,1
 --track1:落下速度,1,10,8,0.1
 --track2:開始位置,-10,300,0,0.01
 --track3:演出設定,0,5,1,1
@@ -281,7 +281,7 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
         obj.setoption("blend","alpha_sub")
         obj.drawpoly(x-50*size,y-50*size,z,x+50*size,y-50*size,z,x+50*size,y+50*size,z,x-50*size,y+50*size,z)    
     end
-    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
+    obj.setoption("drawtarget","framebuffer")  
     obj.load("tempbuffer")
     obj.draw(0,0,0,1,0.8)
     if(gt>1 and obj.track3 % 2 == 0 and (not holdflag))then
@@ -414,7 +414,7 @@ if(flickpair) then --time1,start1,goal1
         obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2,0,(1-flickpair[i][1])*60+flickpair[i][3]*3,obj.w,(1-flickpair[i][1])*60+flickpair[i][3]*3,obj.w,(1-flickpair[i][4])*60+flickpair[i][3]*3,0,(1-flickpair[i][4])*60+flickpair[i][3]*3)
     end
     obj.load("tempbuffer")
-    obj.setoption("drawtarget","framebuffer")  --これがないと次のobj.drawでも仮想バッファに描画してしまう
+    obj.setoption("drawtarget","framebuffer") 
     obj.effect("斜めクリッピング","中心Y",-30,"ぼかし",40,"幅",540)
     obj.draw(0,0,0,1,0.8)
 end
