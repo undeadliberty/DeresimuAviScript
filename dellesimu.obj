@@ -2,10 +2,9 @@
 --track1:落下速度,1,10,8,0.1
 --track2:開始位置,-10,300,0,0.01
 --track3:演出設定,0,5,1,1
---check0:リング表示,1
 --file:
 
---コンボ表示　大 0,1 小 2,3 無 4,5
+--コンボ表示　大 0,1 小 2,3 無 4,5 (無のときparfectとリング表示も消えます)
 --エフェクト表示　有 0,2,4 無 1,3,5
 
 
@@ -26,8 +25,8 @@ local notime = obj.track2+obj.time
 local speed=3-0.3*obj.track1
 if obj.track1>4.0 then
     speed=speed + 0.1*(obj.track1-4)
-    if obj.track1>9.0 then
-        speed=speed- 0.1*(obj.track1-9)
+    if obj.track1>9.5 then
+        speed=speed- 0.2*(obj.track1-9.5)
     end
 end
 
@@ -68,7 +67,12 @@ for line in io.lines(file) do
         local a,b = string.match(line,"([0-9.]+),%s*([0-9.]+)")
         table.insert(bpm,{tonumber(a),tonumber(b)})
     elseif(string.match(line,"^#%d")) then
-        local canel,step,notes,sg,eg=string.match(line,"^#(%d+),(%d+):(%d+):(%d+):?(%d*)")
+        local canel,step,notes,sg,eg=string.match(line,"^#(%d+),(%d+):(%d+):?(%d*):?(%d*)")
+        if(not tonumber(sg))then
+            for i=0,#notes do
+                sg=sg..'3'
+            end
+        end
         if(not tonumber(eg))then
             eg=sg    
         end
@@ -299,7 +303,7 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
     end
 end
 
-if(obj.check0)then
+if(obj.track3<4)then
     obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
     obj.effect("クリッピング","上",142*obj.track0,"下",142*(3-obj.track0),"中心の位置を変更",1)
     obj.draw(0,240,0,0.96)
