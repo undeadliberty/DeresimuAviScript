@@ -1,4 +1,4 @@
---track0:ƒm[ƒc,0,3,0,1
+--track0:ƒm[ƒc,0,4,0,1
 --track1:—‰º‘¬“x,1,10,8,0.1
 --track2:ŠJnˆÊ’u,-10,300,0,0.01
 --track3:‰‰oİ’è,0,5,1,1
@@ -21,6 +21,7 @@ local combo=0
 local bpm={}
 local offset=0
 local notime = obj.track2+obj.time
+local Attr = obj.track0 -1
 
 local speed=3-0.3*obj.track1
 if obj.track1>4.0 then
@@ -87,14 +88,14 @@ for line in io.lines(file) do
                 local goal=tonumber(string.sub(eg,j,j))
                 if(notime > t) then                   
                     if(not(longstack[goal] and longstack[goal][1] < notime-t))then
-                        longstack[goal]={notime-t,i}
+                        longstack[goal]={notime-t,i,Attr}
                     end
                     if(not(flickstack[canel] and flickstack[canel][1] < (notime-t)/speed+1))then
-                        flickstack[canel]={(notime-t)/speed+1,i,start,goal}
+                        flickstack[canel]={(notime-t)/speed+1,i,start,goal,Attr}
                     end
                     combo=combo+1
                 elseif(t-notime<speed)then
-                    table.insert(notestack,{(notime-t)/speed+1,i,start,goal,canel})
+                    table.insert(notestack,{(notime-t)/speed+1,i,start,goal,canel,Attr})
                 else
                     if(not(longstack[goal+5] and longstack[goal+5][1] > (notime-t)/speed+1))then
                         longstack[goal+5]={(notime-t)/speed+1,i,start}
@@ -107,6 +108,16 @@ for line in io.lines(file) do
             end
             k=k+1
         end
+    elseif(obj.track0 == 0 and string.match(line,"^#%s*Attribute")) then
+        if(string.match(line,"Cu"))then
+            Attr=0
+        elseif(string.match(line,"Co"))then
+            Attr=1
+        elseif(string.match(line,"Pa"))then
+            Attr=2
+        elseif(string.match(line,"All"))then
+            Attr=3
+        end
     end
 end
 
@@ -118,31 +129,32 @@ for i=1,5 do
     if(longstack[i])then
         lastap[i]=longstack[i][1]
         if(longstack[i][2]=='4') then
-            longstack[i]=longstack[i][1]/speed+1   
+            longstack[i]={longstack[i][1]/speed+1,longstack[i][3]}   
         else
             longstack[i]=nil
         end
     end
 end
-for i=1,#notestack do --time,type,start,goal,canel
+for i=1,#notestack do --time,type,start,goal,canel,Attr
     local time = notestack[i][1]
     local type = notestack[i][2]
     local start = notestack[i][3]
     local goal = notestack[i][4]
     local canel = notestack[i][5]
+    Attr = notestack[i][6]
     if(longstack[goal])then
-        table.insert(longpair,{start,goal,time,longstack[goal]})
+        table.insert(longpair,{start,goal,time,longstack[goal][1],longstack[goal][2]})
         longstack[goal]=nil
         if(type=='2')then
             notestack[i][2]='4'
         end
     elseif(type=='4')then
-        longstack[goal]=time
+        longstack[goal]={time,Attr}
     end
     if(flickstack[canel])then
         --debug_print("stack:"..flickstack[canel][1]..",time:"..time..",type:"..type)
         if(flickstack[canel][2]=='5')then
-            table.insert(slidepair,{flickstack[canel][1],flickstack[canel][3],flickstack[canel][4],time,start,goal})
+            table.insert(slidepair,{flickstack[canel][1],flickstack[canel][3],flickstack[canel][4],time,start,goal,flickstack[canel][5]})
             if(type=='5')then
                 notestack[i][2]='6'
             elseif(type=='2')then
@@ -150,27 +162,27 @@ for i=1,#notestack do --time,type,start,goal,canel
             end
         elseif(type=='1' or type=='3')then
             if(canel%4>1 or (flickstack[canel][2]=='1' and flickstack[canel][4]>goal)or(flickstack[canel][2]=='3' and flickstack[canel][4]<goal))then
-                table.insert(flickpair,{flickstack[canel][1],flickstack[canel][3],flickstack[canel][4],time,start,goal})
+                table.insert(flickpair,{flickstack[canel][1],flickstack[canel][3],flickstack[canel][4],time,start,goal,flickstack[canel][5]})
             end
         end
         flickstack[canel]=nil
     end
     if(type=='1' or type=='3' or type=='5')then
-        flickstack[canel]={time,type,start,goal}
+        flickstack[canel]={time,type,start,goal,Attr}
     end       
 end
 for i=1,5 do
     if(longstack[i] and longstack[i+5]) then
-        table.insert(longpair,{longstack[i+5][3],i,longstack[i+5][1],longstack[i]})
+        table.insert(longpair,{longstack[i+5][3],i,longstack[i+5][1],longstack[i][1],longstack[i][2]})
     end
 end
 for canel,stack in  pairs(flickstack) do
     if(flicklast[canel])then
         if(stack[2]=='5')then
-            table.insert(slidepair,{stack[1],stack[3],stack[4],flicklast[canel][1],flicklast[canel][3],flicklast[canel][4]})
+            table.insert(slidepair,{stack[1],stack[3],stack[4],flicklast[canel][1],flicklast[canel][3],flicklast[canel][4],stack[5]})
         elseif(flicklast[canel][2]=='1' or flicklast[canel][2]=='3')then
             if(canel%4>1 or (stack[2]=='1' and stack[4]>flicklast[canel][4])or(stack[2]=='3' and stack[4]<flicklast[canel][4]))then
-                table.insert(flickpair,{stack[1],stack[3],stack[4],flicklast[canel][1],flicklast[canel][3],flicklast[canel][4]})
+                table.insert(flickpair,{stack[1],stack[3],stack[4],flicklast[canel][1],flicklast[canel][3],flicklast[canel][4],stack[5]})
             end
         end
     end    
@@ -180,7 +192,7 @@ for i=1,math.floor(#notestack/2) do
     notestack[i],notestack[#notestack-i+1]=notestack[#notestack-i+1],notestack[i]
 end
 
-local function Drawlong(st,sts,stg,gt,gts,gtg)
+local function Drawlong(Attr,st,sts,stg,gt,gts,gtg)
     local k=40
     local time=0
     local k2=0
@@ -247,13 +259,13 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
             end
             local x2,y2,z2,size2 =GetPosition(time,start,goal)
             obj.setoption("drawtarget","tempbuffer")
-            if(obj.track0==0)then
+            if(Attr==0)then
                 obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(325+5*math.sin((i/k+k2)*2*math.pi+stg/3),80+20*math.sin((i/k+k2)*2*math.pi+stg/3),100),"color2",HSV(325+5*math.sin((i/k+k2)*2*math.pi+stg/3),80+20*math.sin(((i+1)/k+k2)*2*math.pi+stg/3),100))
-            elseif(obj.track0==1)then
+            elseif(Attr==1)then
                 obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(205+5*math.sin((i/k+k2)*2*math.pi+stg/3),80+20*math.sin((i/k+k2)*2*math.pi+stg/3),100),"color2",HSV(205+5*math.sin((i/k+k2)*2*math.pi+stg/3),80+20*math.sin(((i+1)/k+k2)*2*math.pi+stg/3),100))
-            elseif(obj.track0==2)then
+            elseif(Attr==2)then
                 obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(40-5*math.sin((i/k+k2)*2*math.pi+stg/3),70+10*math.sin((i/k+k2)*2*math.pi+stg/3),100),"color2",HSV(40-5*math.sin((i/k+k2)*2*math.pi+stg/3),70+10*math.sin(((i+1)/k+k2)*2*math.pi+stg/3),100))
-            elseif(obj.track0==3)then
+            elseif(Attr==3)then
                 obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(math.floor((i/k+k2)*360+stg*20+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k+k2)*360+stg*20+100)%360,30,90))
             else
                 obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(0,0,90+10*math.sin((i/k+k2)*2*math.pi+stg/3)),"color2",HSV(0,0,90+10*math.sin(((i+1)/k+k2)*2*math.pi+stg/3)))
@@ -266,7 +278,7 @@ local function Drawlong(st,sts,stg,gt,gts,gtg)
         local x,y,z,size=GetPosition(1,goal,goal)
         obj.load("figure","‰~")
         if(holdflag)then
-            table.insert(holdstack,goal)
+            table.insert(holdstack,{goal,Attr})
         else
             size=size+0.3
             obj.effect("‹«ŠE‚Ú‚©‚µ","”ÍˆÍ",12,"“§–¾“x‚Ì‹«ŠE‚ğ‚Ú‚©‚·",1)
@@ -305,7 +317,7 @@ end
 
 if(obj.track3<4)then
     obj.load("image",obj.getinfo("script_path").."image\\ui\\ring_lower.png")
-    obj.effect("ƒNƒŠƒbƒsƒ“ƒO","ã",142*obj.track0,"‰º",142*(3-obj.track0),"’†S‚ÌˆÊ’u‚ğ•ÏX",1)
+    obj.effect("ƒNƒŠƒbƒsƒ“ƒO","ã",142*Attr,"‰º",142*(3-Attr),"’†S‚ÌˆÊ’u‚ğ•ÏX",1)
     obj.draw(0,240,0,0.96)
 end
 
@@ -380,29 +392,9 @@ end
 
 if(flickpair) then --time1,start1,goal1
     local k=60
-    obj.setoption("drawtarget","tempbuffer",60/k,120)
-    obj.setoption("blend","alpha_add")
-    for i=1,k*2-1 do
-        obj.load("figure","lŠpŒ`",HSV(0,0,80),60/k)
-        if(obj.track0==0)then
-            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(325+5*math.sin((i/k)*2*math.pi),80+20*math.sin((i/k)*2*math.pi),100),"color2",HSV(325+5*math.sin((i/k)*2*math.pi),80+20*math.sin(((i+1)/k)*2*math.pi),100))
-        elseif(obj.track0==1)then
-            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(205+5*math.sin((i/k)*2*math.pi),80+20*math.sin((i/k)*2*math.pi),100),"color2",HSV(205+5*math.sin((i/k)*2*math.pi),80+20*math.sin(((i+1)/k)*2*math.pi),100))
-        elseif(obj.track0==2)then
-            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(40-5*math.sin((i/k)*2*math.pi),70+10*math.sin((i/k)*2*math.pi),100),"color2",HSV(40-5*math.sin((i/k)*2*math.pi),70+10*math.sin(((i+1)/k)*2*math.pi),100))
-        elseif(obj.track0==3)then
-            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(math.floor((i/k)*360+100)%360,30,90),"color2",HSV(math.floor(((i+1)/k)*360+100)%360,30,90))
-        else
-            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(0,0,90+10*math.sin((i/k)*2*math.pi)),"color2",HSV(0,0,90+10*math.sin(((i+1)/k)*2*math.pi)))
-        end
-        obj.setoption("drawtarget","tempbuffer")
-        obj.setoption("blend","alpha_add")
-        obj.draw(0,60-((i+0.5)/k)*60)    
-    end
-    obj.load("tempbuffer")
-    obj.setoption("drawtarget","tempbuffer",1280,720)
     for i=1,#flickpair do
         local k2=0
+        Attr = flickpair[i][7]
         local x1,y1,z1,size1 =GetPosition(flickpair[i][1],flickpair[i][2],flickpair[i][3])
         if(flickpair[i][1]>1)then
             x1,k2,k2,size1 =GetPosition(1,flickpair[i][2],flickpair[i][3])
@@ -414,26 +406,46 @@ if(flickpair) then --time1,start1,goal1
         local x2,y2,z2,size2 =GetPosition(flickpair[i][4],flickpair[i][5],flickpair[i][6])
         local sinx=(y1-y2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
         local cosx=(x1-x2)/math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))
+        obj.setoption("drawtarget","tempbuffer",60/k,120)
+    obj.setoption("blend","alpha_add")
+    for j=1,k*2-1 do
+        obj.load("figure","lŠpŒ`",HSV(0,0,80),60/k)
+        if(Attr==0)then
+            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(325+5*math.sin((j/k)*2*math.pi),80+20*math.sin((j/k)*2*math.pi),100),"color2",HSV(325+5*math.sin((j/k)*2*math.pi),80+20*math.sin(((j+1)/k)*2*math.pi),100))
+        elseif(Attr==1)then
+            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(205+5*math.sin((j/k)*2*math.pi),80+20*math.sin((j/k)*2*math.pi),100),"color2",HSV(205+5*math.sin((j/k)*2*math.pi),80+20*math.sin(((j+1)/k)*2*math.pi),100))
+        elseif(Attr==2)then
+            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(40-5*math.sin((j/k)*2*math.pi),70+10*math.sin((j/k)*2*math.pi),100),"color2",HSV(40-5*math.sin((j/k)*2*math.pi),70+10*math.sin(((j+1)/k)*2*math.pi),100))
+        elseif(Attr==3)then
+            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(math.floor((j/k)*360+100)%360,30,90),"color2",HSV(math.floor(((j+1)/k)*360+100)%360,30,90))
+        else
+            obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","color",HSV(0,0,90+10*math.sin((j/k)*2*math.pi)),"color2",HSV(0,0,90+10*math.sin(((j+1)/k)*2*math.pi)))
+        end
         obj.setoption("drawtarget","tempbuffer")
-        obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2,0,(1-flickpair[i][1])*60+flickpair[i][3]*3,obj.w,(1-flickpair[i][1])*60+flickpair[i][3]*3,obj.w,(1-flickpair[i][4])*60+flickpair[i][3]*3,0,(1-flickpair[i][4])*60+flickpair[i][3]*3)
+        obj.setoption("blend","alpha_add")
+        obj.draw(0,60-((j+0.5)/k)*60)    
     end
+    obj.load("tempbuffer")
+    obj.setoption("drawtarget","tempbuffer",1280,720)
+        obj.drawpoly(x1-24*size1*sinx,y1+24*size1*cosx,z1,x1+24*size1*sinx,y1-24*size1*cosx,z1,x2+24*size2*sinx,y2-24*size2*cosx,z2,x2-24*size2*sinx,y2+24*size2*cosx,z2,0,(1-flickpair[i][1])*60+flickpair[i][3]*3,obj.w,(1-flickpair[i][1])*60+flickpair[i][3]*3,obj.w,(1-flickpair[i][4])*60+flickpair[i][3]*3,0,(1-flickpair[i][4])*60+flickpair[i][3]*3)
     obj.load("tempbuffer")
     obj.setoption("drawtarget","framebuffer") 
     obj.effect("Î‚ßƒNƒŠƒbƒsƒ“ƒO","’†SY",-30,"‚Ú‚©‚µ",40,"•",540)
     obj.draw(0,0,0,1,0.8)
+    end
 end
 
 for i=1,#longpair do
     --debug_print(longpair[i][1]..','..longpair[i][2]..','..longpair[i][3]..','..longpair[i][4])
-    Drawlong(longpair[i][3],longpair[i][1],longpair[i][2],longpair[i][4])
+    Drawlong(longpair[i][5],longpair[i][3],longpair[i][1],longpair[i][2],longpair[i][4])
 end
 
 for i=1,#slidepair do
     --debug_print("slide:"..slidepair[i][1]..','..slidepair[i][2]..','..slidepair[i][3]..','..slidepair[i][4]..','..slidepair[i][5]..','..slidepair[i][6])
-    Drawlong(slidepair[i][4],slidepair[i][5],slidepair[i][6],slidepair[i][1],slidepair[i][2],slidepair[i][3])
+    Drawlong(slidepair[i][7],slidepair[i][4],slidepair[i][5],slidepair[i][6],slidepair[i][1],slidepair[i][2],slidepair[i][3])
 end
 
-local function Drawnote(type,start,goal,time)--í—ŞAoŒ»ˆÊ’uA“’…ˆÊ’uAŒo‰ßŠÔ
+local function Drawnote(type,start,goal,time,Attr)--í—ŞAoŒ»ˆÊ’uA“’…ˆÊ’uAŒo‰ßŠÔ
     obj.load("image",obj.getinfo("script_path").."image\\note\\notes.png")
     local nox,noy,noz,size =GetPosition(time,start,goal)
     if(type=='1')then
@@ -451,7 +463,7 @@ local function Drawnote(type,start,goal,time)--í—ŞAoŒ»ˆÊ’uA“’…ˆÊ’uAŒo‰ßŠ
     else
         type=0
     end
-    obj.drawpoly(nox-77*size,noy-55*size,noz,nox+77*size,noy-55*size,noz,nox+77*size,noy+55*size,noz,nox-77*size,noy+55*size,noz,154*obj.track0,type,154*(1+obj.track0),type,154*(1+obj.track0),type+110,154*obj.track0,type+110)
+    obj.drawpoly(nox-77*size,noy-55*size,noz,nox+77*size,noy-55*size,noz,nox+77*size,noy+55*size,noz,nox-77*size,noy+55*size,noz,154*Attr,type,154*(1+Attr),type,154*(1+Attr),type+110,154*Attr,type+110)
     return nil
 end
 
@@ -468,10 +480,10 @@ for i=1,#notestack do
         obj.effect("ƒOƒ‰ƒf[ƒVƒ‡ƒ“","type",3,"•",10)
         obj.drawpoly(x1+48*size,y1-5*size,z1,x2-48*size,y1-5*size,z1,x2-48*size,y1+5*size,z1,x1+48*size,y1+5*size,z1)
     end
-    Drawnote(notestack[i][2],notestack[i][3],notestack[i][4],notestack[i][1])
+    Drawnote(notestack[i][2],notestack[i][3],notestack[i][4],notestack[i][1],notestack[i][6])
 end
 for i=1,#holdstack do
-    Drawnote('5',holdstack[i],holdstack[i],1)    
+    Drawnote('5',holdstack[i][1],holdstack[i][1],1,holdstack[i][2])    
 end
 
 

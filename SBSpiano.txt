@@ -2,6 +2,7 @@
 #BPM 138.00
 #Offset 1500
 #Difficulty Master+
+#Attribute All
 
 #0,001:22222222:55443221:45543211
 #1,001:00000020:4
